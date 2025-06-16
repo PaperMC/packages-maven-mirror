@@ -26,11 +26,7 @@ export default {
 
 		const cachedResponse = await cache.match(cacheKey);
 		if (cachedResponse) {
-			return new Response(cachedResponse.body, {
-				status: cachedResponse.status,
-				statusText: cachedResponse.statusText,
-				headers: new Headers(cachedResponse.headers),
-			});
+			return cachedResponse.clone();
 		}
 
 		const newRequest = new Request(targetUrl, {
