@@ -30,7 +30,7 @@
 	"vars": {
 		"GITHUB_OWNER": "PaperMC",
 		"GITHUB_REPO": "Paper",
-		"ALLOWED_PATHS": "^pr[0-9]+\/io\/papermc\/paper"
+		"ALLOWED_PATHS": "^/pr[0-9]+/io/papermc/paper"
 	}
 	/**
 	 * Note: Use secrets to store sensitive data.

@@ -95,6 +95,7 @@ function isAllowedPath(env: Env, url: string): boolean {
 				return true;
 			}
 		}
+		return false;
 	}
 	return true;
 }
