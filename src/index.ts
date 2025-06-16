@@ -1,5 +1,3 @@
-const allowedExtensions = [".jar", ".zip", ".module", ".pom", ".xml", ".sha1", ".md5", ".sha256", ".asc"]
-
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const githubMavenUrl = `https://maven.pkg.github.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}`;
@@ -13,15 +11,7 @@ export default {
 		if (!isAllowedPath(env, path)) {
 			return new Response(`Invalid request (path)`, { status: 404 });
 		}
-
-		let allowed = false;
-		for (const ext of allowedExtensions) {
-			if (path.endsWith(ext)) {
-				allowed = true;
-				break;
-			}
-		}
-		if (!allowed) {
+		if (!isAllowedExtension(env, path)) {
 			return new Response(`Invalid request (extension)`, { status: 404 });
 		}
 
@@ -98,4 +88,16 @@ function isAllowedPath(env: Env, url: string): boolean {
 		return false;
 	}
 	return true;
+}
+
+function isAllowedExtension(env: Env, path: string): boolean {
+	const allowedExtensions = env.ALLOWED_EXTENSIONS.split(",");
+
+	for (const ext of allowedExtensions) {
+		if (path.endsWith(ext)) {
+			return true;
+		}
+	}
+
+	return false;
 }
