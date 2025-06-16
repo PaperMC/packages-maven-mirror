@@ -4,15 +4,18 @@ export default {
 		const githubToken = env.GITHUB_TOKEN;
 
 		const url = new URL(request.url);
-		const path = url.pathname;
-		if (!path.startsWith("/")) {
-			return new Response(`Invalid request (missing slash)`, { status: 404 });
+		let path = url.pathname;
+		if (!path.startsWith(`/${env.GITHUB_REPO}/`)) {
+			return new Response(`Invalid request (bad prefix)`, { status: 404 });
 		}
+		// Remove the leading /${env.GITHUB_REPO}
+		// TODO: Support multiple repositories
+		path = path.substring(env.GITHUB_REPO.length + 1);
 		if (!isAllowedPath(env, path)) {
-			return new Response(`Invalid request (path)`, { status: 404 });
+			return new Response(`Invalid request (bad path)`, { status: 404 });
 		}
 		if (!isAllowedExtension(env, path)) {
-			return new Response(`Invalid request (extension)`, { status: 404 });
+			return new Response(`Invalid request (bad extension)`, { status: 404 });
 		}
 
 		const targetUrl = `${githubMavenUrl}${path}`;
