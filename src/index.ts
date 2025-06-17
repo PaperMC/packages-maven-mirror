@@ -1,52 +1,52 @@
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const githubMavenUrl = `https://maven.pkg.github.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}`;
-		const githubToken = env.GITHUB_TOKEN;
+  async fetch(request, env, ctx): Promise<Response> {
+    const githubMavenUrl = `https://maven.pkg.github.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}`;
+    const githubToken = env.GITHUB_TOKEN;
 
-		const url = new URL(request.url);
-		let path = url.pathname;
-		if (!path.startsWith(`/${env.GITHUB_REPO}/`)) {
-			return new Response(`Invalid request (bad prefix)`, { status: 404 });
-		}
-		// Remove the leading /${env.GITHUB_REPO}
-		// TODO: Support multiple repositories
-		path = path.substring(env.GITHUB_REPO.length + 1);
-		if (!isAllowedPath(env, path)) {
-			return new Response(`Invalid request (bad path)`, { status: 404 });
-		}
-		if (!isAllowedExtension(env, path)) {
-			return new Response(`Invalid request (bad extension)`, { status: 404 });
-		}
-		if (request.method === 'OPTIONS') {
-			return new Response(null, {
-				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'GET, OPTIONS',
-					'Access-Control-Allow-Headers': 'Accept, HEAD'
-				}
-			});
-		} else if (request.method !== 'GET' && request.method !== 'HEAD') {
-			return new Response(`Method not allowed`, { status: 405 });
-		}
+    const url = new URL(request.url);
+    let path = url.pathname;
+    if (!path.startsWith(`/${env.GITHUB_REPO}/`)) {
+      return new Response(`Invalid request (bad prefix)`, { status: 404 });
+    }
+    // Remove the leading /${env.GITHUB_REPO}
+    // TODO: Support multiple repositories
+    path = path.substring(env.GITHUB_REPO.length + 1);
+    if (!isAllowedPath(env, path)) {
+      return new Response(`Invalid request (bad path)`, { status: 404 });
+    }
+    if (!isAllowedExtension(env, path)) {
+      return new Response(`Invalid request (bad extension)`, { status: 404 });
+    }
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Accept, HEAD",
+        },
+      });
+    } else if (request.method !== "GET" && request.method !== "HEAD") {
+      return new Response(`Method not allowed`, { status: 405 });
+    }
 
-		const targetUrl = `${githubMavenUrl}${path}`;
+    const targetUrl = `${githubMavenUrl}${path}`;
 
-		const cache = caches.default;
-		const cacheTtl = 60 * 5;
-		const cacheKey = new Request(targetUrl, { method: 'GET' });
+    const cache = caches.default;
+    const cacheTtl = 60 * 5;
+    const cacheKey = new Request(targetUrl, { method: "GET" });
 
-		const cachedResponse = await cache.match(cacheKey);
-		if (cachedResponse) {
-			return request.method === "HEAD" ? stripBody(cachedResponse) : cachedResponse.clone();
-		}
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      return request.method === "HEAD" ? stripBody(cachedResponse) : cachedResponse.clone();
+    }
 
-		const newRequest = new Request(targetUrl, {
-			method: 'GET',
-			headers: {
-				'Authorization': `Bearer ${githubToken}`,
-        'Accept': request.headers.get('Accept') || 'application/octet-stream',
-        'User-Agent': 'Cloudflare-Worker-Maven-Proxy',
-				'Access-Control-Allow-Origin': '*',
+    const newRequest = new Request(targetUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: request.headers.get("Accept") || "application/octet-stream",
+        "User-Agent": "Cloudflare-Worker-Maven-Proxy",
+        "Access-Control-Allow-Origin": "*",
       },
     });
 
@@ -54,7 +54,7 @@ export default {
       const response = await fetch(newRequest);
 
       if (!response.ok) {
-				console.warn(response);
+        console.warn(response);
         return new Response(`Failed to fetch from GitHub Packages`, { status: response.status });
       }
 
@@ -64,60 +64,58 @@ export default {
         headers: response.headers,
       });
 
-      cacheResponse.headers.set('Cache-Control', `public, max-age=${cacheTtl}`);
-			cacheResponse.headers.set('Access-Control-Allow-Origin', '*');
+      cacheResponse.headers.set("Cache-Control", `public, max-age=${cacheTtl}`);
+      cacheResponse.headers.set("Access-Control-Allow-Origin", "*");
 
       if (response.ok) {
-        ctx.waitUntil(
-          cache.put(cacheKey, cacheResponse.clone())
-        );
+        ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
       }
 
       return request.method === "HEAD" ? stripBody(cacheResponse) : cacheResponse;
     } catch (error) {
-			console.error(error);
+      console.error(error);
       return new Response(`Internal server error`, { status: 500 });
     }
   },
 } satisfies ExportedHandler<Env>;
 
 function stripBody(response: Response): Response {
-	return new Response(null, {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers,
-	});
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 }
 
 function isAllowedPath(env: Env, url: string): boolean {
-	if (env.ALLOWED_PATHS) {
-		const allowedPackages: RegExp[] = [];
-		const split = env.ALLOWED_PATHS.split(',');
-		for (let i = 0; i < split.length; i++) {
-			allowedPackages.push(new RegExp(split[i].trim()));
-		}
-		if (allowedPackages.length === 0) {
-			return true;
-		}
-		for (let i = 0; i < allowedPackages.length; i++) {
-			const pkg = allowedPackages[i];
-			if (pkg.test(url)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	return true;
+  if (env.ALLOWED_PATHS) {
+    const allowedPackages: RegExp[] = [];
+    const split = env.ALLOWED_PATHS.split(",");
+    for (let i = 0; i < split.length; i++) {
+      allowedPackages.push(new RegExp(split[i].trim()));
+    }
+    if (allowedPackages.length === 0) {
+      return true;
+    }
+    for (let i = 0; i < allowedPackages.length; i++) {
+      const pkg = allowedPackages[i];
+      if (pkg.test(url)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return true;
 }
 
 function isAllowedExtension(env: Env, path: string): boolean {
-	const allowedExtensions = env.ALLOWED_EXTENSIONS.split(",");
+  const allowedExtensions = env.ALLOWED_EXTENSIONS.split(",");
 
-	for (const ext of allowedExtensions) {
-		if (path.endsWith(ext)) {
-			return true;
-		}
-	}
+  for (const ext of allowedExtensions) {
+    if (path.endsWith(ext)) {
+      return true;
+    }
+  }
 
-	return false;
+  return false;
 }
