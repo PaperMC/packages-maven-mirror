@@ -6,16 +6,31 @@ export default {
     const url = new URL(request.url);
     let path = url.pathname;
     if (!path.startsWith(`/${env.GITHUB_REPO}/`)) {
-      return new Response(`Invalid request (bad prefix)`, { status: 404 });
+      return new Response(`Invalid request (bad prefix)`, {
+        status: 404,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
     // Remove the leading /${env.GITHUB_REPO}
     // TODO: Support multiple repositories
     path = path.substring(env.GITHUB_REPO.length + 1);
     if (!isAllowedPath(env, path)) {
-      return new Response(`Invalid request (bad path)`, { status: 404 });
+      return new Response(`Invalid request (bad path)`, {
+        status: 404,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
     if (!isAllowedExtension(env, path)) {
-      return new Response(`Invalid request (bad extension)`, { status: 404 });
+      return new Response(`Invalid request (bad extension)`, {
+        status: 404,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -26,7 +41,12 @@ export default {
         },
       });
     } else if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response(`Method not allowed`, { status: 405 });
+      return new Response(`Method not allowed`, {
+        status: 405,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
 
     const targetUrl = `${githubMavenUrl}${path}`;
@@ -54,8 +74,16 @@ export default {
       const response = await fetch(newRequest);
 
       if (!response.ok) {
-        console.warn(response);
-        return new Response(`Failed to fetch from GitHub Packages`, { status: response.status });
+        console.warn("Failed to fetch from GitHub Packages", response);
+        const fail = new Response(`Failed to fetch from GitHub Packages: ${response.statusText}`, {
+          status: response.status,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": `public, max-age=${cacheTtl}`,
+          },
+        });
+        ctx.waitUntil(cache.put(cacheKey, fail.clone()));
+        return fail;
       }
 
       const cacheResponse = new Response(response.body, {
@@ -67,13 +95,11 @@ export default {
       cacheResponse.headers.set("Cache-Control", `public, max-age=${cacheTtl}`);
       cacheResponse.headers.set("Access-Control-Allow-Origin", "*");
 
-      if (response.ok) {
-        ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
-      }
+      ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
 
       return request.method === "HEAD" ? stripBody(cacheResponse) : cacheResponse;
     } catch (error) {
-      console.error(error);
+      console.error("Internal server error", error);
       return new Response(`Internal server error`, { status: 500 });
     }
   },
