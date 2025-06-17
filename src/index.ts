@@ -24,10 +24,12 @@ export default {
 		const cacheTtl = 60 * 5;
 		const cacheKey = new Request(targetUrl, { method: 'GET' });
 
+		/*
 		const cachedResponse = await cache.match(cacheKey);
 		if (cachedResponse) {
 			return cachedResponse.clone();
 		}
+		 */
 
 		const newRequest = new Request(targetUrl, {
 			method: request.method,
@@ -54,11 +56,13 @@ export default {
 
       cacheResponse.headers.set('Cache-Control', `public, max-age=${cacheTtl}`);
 
+			/*
       if (response.ok) {
         ctx.waitUntil(
           cache.put(cacheKey, cacheResponse.clone())
         );
       }
+			 */
 
       return cacheResponse;
     } catch (error) {
