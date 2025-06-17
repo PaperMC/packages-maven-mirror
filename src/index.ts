@@ -17,6 +17,17 @@ export default {
 		if (!isAllowedExtension(env, path)) {
 			return new Response(`Invalid request (bad extension)`, { status: 404 });
 		}
+		if (request.method === 'OPTIONS') {
+			return new Response(null, {
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Methods': 'GET, OPTIONS',
+					'Access-Control-Allow-Headers': 'Accept, HEAD'
+				}
+			});
+		} else if (request.method !== 'GET' && request.method !== 'HEAD') {
+			return new Response(`Method not allowed`, { status: 405 });
+		}
 
 		const targetUrl = `${githubMavenUrl}${path}`;
 
@@ -24,19 +35,18 @@ export default {
 		const cacheTtl = 60 * 5;
 		const cacheKey = new Request(targetUrl, { method: 'GET' });
 
-		/*
 		const cachedResponse = await cache.match(cacheKey);
 		if (cachedResponse) {
-			return cachedResponse.clone();
+			return request.method === "HEAD" ? stripBody(cachedResponse) : cachedResponse.clone();
 		}
-		 */
 
 		const newRequest = new Request(targetUrl, {
-			method: request.method,
+			method: 'GET',
 			headers: {
 				'Authorization': `Bearer ${githubToken}`,
         'Accept': request.headers.get('Accept') || 'application/octet-stream',
         'User-Agent': 'Cloudflare-Worker-Maven-Proxy',
+				'Access-Control-Allow-Origin': '*',
       },
     });
 
@@ -55,22 +65,29 @@ export default {
       });
 
       cacheResponse.headers.set('Cache-Control', `public, max-age=${cacheTtl}`);
+			cacheResponse.headers.set('Access-Control-Allow-Origin', '*');
 
-			/*
       if (response.ok) {
         ctx.waitUntil(
           cache.put(cacheKey, cacheResponse.clone())
         );
       }
-			 */
 
-      return cacheResponse;
+      return request.method === "HEAD" ? stripBody(cacheResponse) : cacheResponse;
     } catch (error) {
 			console.error(error);
       return new Response(`Internal server error`, { status: 500 });
     }
   },
 } satisfies ExportedHandler<Env>;
+
+function stripBody(response: Response): Response {
+	return new Response(null, {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers,
+	});
+}
 
 function isAllowedPath(env: Env, url: string): boolean {
 	if (env.ALLOWED_PATHS) {
