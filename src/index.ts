@@ -52,7 +52,7 @@ export default {
     const targetUrl = `${githubMavenUrl}${path}`;
 
     const cache = caches.default;
-    const cacheTtl = 60 * 5;
+    const cacheTtl = 60 * 15;
     const cacheKey = new Request(targetUrl, { method: "GET" });
 
     const cachedResponse = await cache.match(cacheKey);
