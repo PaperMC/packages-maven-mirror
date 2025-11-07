@@ -74,7 +74,13 @@ export default {
       const response = await fetch(newRequest);
 
       if (!response.ok) {
-        console.warn("Failed to fetch from GitHub Packages", response);
+        console.warn("Failed to fetch from GitHub Packages", {
+          url: newRequest.url,
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: await response.text(),
+        });
         const fail = new Response(`Failed to fetch from GitHub Packages: ${response.statusText}`, {
           status: response.status,
           headers: {
