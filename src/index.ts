@@ -36,8 +36,8 @@ export default {
       return new Response(null, {
         headers: {
           "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Accept, HEAD",
+          "Access-Control-Allow-Methods": "GET, OPTIONS, HEAD",
+          "Access-Control-Allow-Headers": "Accept",
         },
       });
     } else if (request.method !== "GET" && request.method !== "HEAD") {
